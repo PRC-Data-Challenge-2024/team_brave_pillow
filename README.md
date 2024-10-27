@@ -28,24 +28,14 @@ Here we extract the features from the trajectory data in "processed" folder and 
     3. `add_features.py` file add more features such as airport distance and drag, and imputation.
 
 ## Model building
-4. We proposed two model for processing:
+We proposed two model for processing:
    
-   a. `Median voting`, where we trained numerous model (thanks to our trial and error, and also for loop!) and select the final result from the median of the predicted value from each. 
-       We uses this architecture because we realized that the deviation of each prediction using different features deviates differently from the ground truth. Thus, following the law of 
-       large number, the median voting can be helpful. This results in 2318 rmse. However, this model has several drawbacks. First, it is very time-consuming to train the all models, 
-       around 2 minutes each. Second, this model relies heavily on the "base" features and model. We got 2250-ish before the final_submission_set was released, thanks to the good 
-       features and/or model parameters. Unfortunately, we could not reproduce it, it was a messy day where we trained so many models, explored so many ML techniques, and lost track of 
-       it (or you may say it was beginner's luck).
+   1. `Median voting`, where we trained numerous model (thanks to our trial and error, and also for loop!) and select the final result from the median of the predicted value from each. We used this architecture because we realized that the deviation of each prediction using different features deviates differently from the ground truth. Thus, following the law of large number, the median voting can be helpful. This results in 2318 rmse. However, this model has several drawbacks. First, it is very time-consuming to train the all models, around 2 minutes each. Second, this model relies heavily on the "base" features and model. We got 2250-ish before the final_submission_set was released, thanks to the good features and/or model parameters. Unfortunately, we could not reproduce it, it was a messy day where we trained so many models, explored so many ML techniques, and lost track of it (or you may say it was beginner's luck). The structure of this models is as follows:
+![Median voting](voting_model.jpeg) 
    
-   b. `RMSE filtering`, where we trained different model according to number of aircraft type (the aircraft type with <1% population is merged into one). This is done by performing an 
-       undersampling on the other aircraft type and focusing on the aircraft-type-of-interest. Then, each model is trained under this samples and the validation rmse for each aircraft 
-       type is logged, both in in training and validation. Then, we select the model that has the lowest rmse to estimate the take-off weight. This got us 2066-ish rmse in our validation 
-       set. However, we cannot reproduce this result for the final_sub set and achieve only 2335-ish. This model, in our opinion, is still better than training more models to squeeze 
-       water out of a stone and got only slightly better results.
-
-The final model of RMSE Filtering ![RMSE Filtering](RMSE_Filtering.jpeg) 
-
-
+   2. `RMSE filtering`, where we trained different model according to number of aircraft type (the aircraft type with <1% population is merged into one). This is done by performing an undersampling on the other aircraft type and focusing on the aircraft-type-of-interest. Then, each model is trained under this samples and the validation rmse for each aircraft type is logged, both in in training and validation. Then, we select the model that has the lowest rmse to estimate the take-off weight. This got us 2066-ish rmse in our validation set. However, we cannot reproduce this result for the final_sub set and achieve only 2276 kg of RMSE. This model, in our opinion, is still better than training more models to squeeze water out of a stone and got only slightly better results.
 ### The final model structure:
+![RMSE Filtering](RMSE_Filtering.jpeg) 
 
-![final_model](final_model.jpeg)
+
+
