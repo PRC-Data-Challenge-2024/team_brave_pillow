@@ -1,7 +1,4 @@
 # %%
-## This file resamples the trajectory data and
-## derives some additional features, like phase, airdistance, airspeed, fueflow and thrust
-
 import os
 import pandas as pd
 import glob
@@ -11,10 +8,14 @@ from multiprocessing import Pool
 from traffic.core import Traffic, Flight
 from openap import aero
 import numpy as np
+from tqdm.contrib.concurrent import process_map  # or thread_map
 import openap
+from sklearn.preprocessing import StandardScaler
+from scipy.signal import savgol_filter
 import gc
-from datetime import datetime
 
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
 import warnings
 
@@ -22,70 +23,39 @@ warnings.filterwarnings("ignore")
 
 
 # %%
-# drops time duplicates and
-# resamples the flight to speed up next processes
 def time_dups(f: Flight) -> Flight:
     if len(f.data) < 10 or np.percentile(f.data.altitude, 80) < 10_000:
         return None
-    dur = f.duration.to_numpy().astype(int) / 10**9
-    res_ = max(1, int(dur / 600))
-    f = f.resample(f"{res_}s")
+    f = f.resample("1s")
     f = f.drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
     ts_diff = f.data.timestamp.diff().astype(int) / 10**9
     ts_diff[0] = 0
-    f = f.assign(ts=ts_diff.cumsum())
-    del ts_diff
-    return f
-
-
-# those labels are used for deriving thrust
-def label(df):
-    fp = openap.FlightPhase()
-    fp.set_trajectory(df.ts, df.altitude, df.tas, df.vertical_rate)
-    label = fp.phaselabel()
-    dc = {
-        "CL": "climb",
-        "CR": "cruise",
-        "DE": "descent_idle",
-        "NA": "descent_idle",
-        "LVL": "descent_idle",
-        "GND": "descent_idle",
-    }
-    phase = [dc.get(item, item) for item in label]
-    df = df.assign(label=phase)
-    return df
-
-
-# more accurate cruise phase extraction
-def extract_cruise(flight: Flight) -> Flight:
-    flight = flight.phases().assign(cruise=0)
-    df = flight.data
-    del flight
-
-    cli_ix = df.query("phase=='CLIMB'").index
-    if len(cli_ix) == 0:
-        id1 = df.index[0]
+    f = f.assign(ts=ts_diff.cumsum()).phases().assign(cruise=0)
+    df_flight = f.data
+    if len(df_flight) >= 300:
+        df_flight["altitude"] = savgol_filter(
+            df_flight["altitude"], window_length=300, polyorder=2
+        )
+        df_flight["vertical_rate"] = savgol_filter(
+            df_flight["vertical_rate"], window_length=100, polyorder=2
+        )
+    elif len(df_flight) >= 100:
+        df_flight["altitude"] = savgol_filter(
+            df_flight["altitude"], window_length=100, polyorder=2
+        )
+        df_flight["vertical_rate"] = savgol_filter(
+            df_flight["vertical_rate"], window_length=100, polyorder=2
+        )
     else:
-        id1 = cli_ix[-1]
-
-    des_ix = df.query("phase=='DESCENT'").index
-    if len(des_ix) == 0:
-        id2 = df.index[-1]
-    else:
-        id2 = des_ix[0]
-
-    df1 = df.loc[id1:id2, :].query(
-        "(phase=='CRUISE' or phase=='LEVEL') "
-        "and 45_000>altitude>20_000 and -500<vertical_rate<500 "
-        "and tas==tas and altitude==altitude"
-    )
-    df.loc[df1.index, "cruise"] = 1
-    del df1, cli_ix, des_ix
-
-    return Flight(df)
+        df_flight["altitude"] = df_flight["altitude"]
+        df_flight["vertical_rate"] = df_flight["vertical_rate"]
+    del ts_diff, f
+    df_flight = df_flight.query("phase=='CLIMB'")
+    if len(df_flight) < 2:
+        return
+    return Flight(df_flight)
 
 
-# determining thrust and fuelflow for the OpenAP aircraft types
 def assign_thff(flight: Flight) -> Flight:
     df1 = flight.data.reset_index(drop=True).drop_duplicates(subset=["ts"])
     del flight
@@ -104,12 +74,12 @@ def assign_thff(flight: Flight) -> Flight:
         "c56x",
         "crj9",
     ]
-    df1 = label(df1)
-    df1 = df1.assign(thrust=np.nan, fuelflow=np.nan, mass_loss=np.nan)
     if ac == "a20n":
         ac = "a320"
     if ac == "a359":
         ac = "a333"
+    # df1 = label(df1)
+    df1 = df1.assign(label="climb", thrust=np.nan, fuelflow=np.nan, mass_loss=np.nan)
     if ac in ac_nosyn:
         del ac, ac_nosyn
         return Flight(df1)
@@ -129,7 +99,6 @@ def assign_thff(flight: Flight) -> Flight:
     return Flight(df1)
 
 
-# deriving tas from groundspeed and wind data
 def compute_airdist(flight):
     vg = flight.data.groundspeed * aero.kts
     dt = flight.data.timestamp.diff().mean().total_seconds()
@@ -154,44 +123,40 @@ def compute_airdist(flight):
 def func(file):
     overwrite = False
 
-    if os.path.exists(f"processed/" + file[5:]) and not overwrite:
-        print(f"{file[5:]} already there")
+    if os.path.exists(f"climb/" + file[19:]) and not overwrite:
+        print(f"{file[19:]} already there")
         return
 
-    df_ac = pd.concat(
-        [
-            pd.read_csv("data/challenge_set.csv"),
-            pd.read_csv("data/final_submission_set.csv"),
-        ]
-    )[["flight_id", "aircraft_type"]]
+    df_ch = pd.read_csv("ch_sub_fin_.csv")
 
-    print(f"file: {file[5:]} \t {datetime.now()}\n")
+    print(f"file: {file[19:]} \t {datetime.now()}\n")
     df1 = pd.read_parquet(file)
-    df1 = df1.merge(df_ac, on="flight_id", how="inner")
+    df1 = df1.merge(df_ch, on="flight_id", how="inner")
+    if len(df1) <= 1:
+        return
     t = Traffic(df1)
     t = (
-        t.filter()
-        .pipe(time_dups)
-        .resample(500)
+        # t.filter()
+        t.pipe(time_dups)
+        # .resample(500)
         .pipe(compute_airdist)
-        .pipe(extract_cruise)
-        .pipe(assign_thff)
-        .eval(10, desc=f"{file[5:]}")
+        # .pipe(extract_cruise)
+        .pipe(assign_thff).eval(10, desc=f"{file[19:]}")
     )
     df1 = t.data.dropna(subset=["flight_id"])
     df1["flight_id"] = df1["flight_id"].astype(int)
-    df1.to_parquet(f"processed/" + file[5:], index=False)
-    print(f"file: {file[5:]} is done \t {datetime.now()}\n")
-    del df1, t, df_ac
+    df1.to_parquet(f"climb/" + file[19:], index=False)
+    print(f"file: {file[19:]} is done \t {datetime.now()}\n")
+    del df1, t, df_ch
     gc.collect()
 
 
 # %%
 def main():
     files = glob.glob("data/*.parquet")
-    Path("processed/").mkdir(exist_ok=True)
+    Path("climb/").mkdir(exist_ok=True)
 
-    for file in files:
+    for file in tqdm(files):
         func(file)
 
 
