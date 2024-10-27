@@ -31,7 +31,7 @@ def classify_time(hour, nb_of_partition=24):
 
 
 # %%
-dff = pd.read_csv("processed_ch_sub_final.csv")
+dff = pd.read_csv("../opensky_ch/processed_ch_sub_final.csv")
 # print(df_challenge_processed.columns)
 dff["adepdespair"] = dff["adep"] + dff["ades"]
 dff["countrypair"] = dff["country_code_adep"] + dff["country_code_ades"]
@@ -96,7 +96,7 @@ ct_features = [
 dff[ct_features] = dff[ct_features].astype("category")
 dff.to_csv("dff_lgb.csv", index=False)
 # %%
-############### Train-Test check #################
+
 dff = pd.read_csv("dff_lgb.csv")
 # Drop extra features
 dff = dff.drop(
@@ -135,7 +135,8 @@ ct_features = [
     "countrypair",
 ]
 dff[ct_features] = dff[ct_features].astype("category")
-# %%     --------takes about 1.5 minutes
+# %% ############### Train-Test check #################
+#      --------takes about 1.5 minutes
 # initialize data
 X = dff.query("dataset=='challenge'").drop(columns=["tow", "dataset"])
 y = dff.query("dataset=='challenge'")["tow"]
