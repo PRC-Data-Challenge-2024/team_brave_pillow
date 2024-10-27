@@ -27,9 +27,8 @@ Here we extract the features from the trajectory data in "processed" folder and 
     
     3. `add_features.py` file add more features such as airport distance,
   
-4. Processing:
-   We proposed two model:
-
+4. We proposed two model for processing:
+   
    a. `Median voting`, where we trained numerous model (thanks to our trial and error, and also for loop!) and select the final result from the median of the predicted value from each. 
        We uses this architecture because we realized that the deviation of each prediction using different features deviates differently from the ground truth. Thus, following the law of 
        large number, the median voting can be helpful. This results in 2318 rmse. However, this model has several drawbacks. First, it is very time-consuming to train the all models, 
@@ -43,6 +42,7 @@ Here we extract the features from the trajectory data in "processed" folder and 
        set. However, we cannot reproduce this result for the final_sub set and achieve only 2335-ish. This model, in our opinion, is still better than training more models to squeeze 
        water out of a stone and got only slightly better results.
 
+       ###The final model of RMSE Filtering !(RMSE filtering)(RMSE_Filtering.jpg) 
 
 
 ### The final model structure:
