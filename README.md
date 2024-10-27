@@ -42,7 +42,7 @@ Here we extract the features from the trajectory data in "processed" folder and 
        set. However, we cannot reproduce this result for the final_sub set and achieve only 2335-ish. This model, in our opinion, is still better than training more models to squeeze 
        water out of a stone and got only slightly better results.
 
-       ###The final model of RMSE Filtering !(RMSE filtering)(RMSE_Filtering.jpg) 
+The final model of RMSE Filtering ![RMSE Filtering](RMSE_Filtering.jpeg) 
 
 
 ### The final model structure:
