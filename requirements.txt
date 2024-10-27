@@ -1,5 +1,5 @@
-openap
-traffic
+openap==2.0
+traffic==2.10.2
 airportsdata
 click
 geopy==2.4.1
