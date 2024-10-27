@@ -34,8 +34,14 @@ We proposed two model for processing:
 ![Median voting](voting_model.jpeg) 
    
    2. `RMSE filtering`, where we trained different model according to number of aircraft type (the aircraft type with <1% population is merged into one). This is done by performing an undersampling on the other aircraft type and focusing on the aircraft-type-of-interest. Then, each model is trained under this samples and the validation rmse for each aircraft type is logged, both in in training and validation. Then, we select the model that has the lowest rmse to estimate the take-off weight. This got us 2066-ish rmse in our validation set. However, we cannot reproduce this result for the final_sub set and achieve only 2276 kg of RMSE. This model, in our opinion, is still better than training more models to squeeze water out of a stone and got only slightly better results.
-### The final model structure:
 ![RMSE Filtering](RMSE_Filtering.jpeg) 
+So, even though the "Median voting" is promising, we used "RMSE filtering" for our final submission.
+
+
+
+
+We know that generation of all those csv-s may take a lot of time, that is why we uploaded them to public google-drive, so you can skip some steps:
+https://drive.google.com/drive/folders/1mMZNaaRNl4Phmu8qSQyLOwXtm4BSoN5K?usp=sharing
 
 
 
