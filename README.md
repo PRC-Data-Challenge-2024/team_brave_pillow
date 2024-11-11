@@ -44,6 +44,6 @@ We know that generation of all those csv-s may take a lot of time, that is why w
 https://drive.google.com/drive/folders/1mMZNaaRNl4Phmu8qSQyLOwXtm4BSoN5K?usp=sharing
 
 # The team members:
-## Fazlur Rahman and Aidana Tassanbi - PhD students at Delft University of Technology
-## Bintang A.S.W.A.M - Masters student at Skolkovo Institute of Science and Technology
+### Fazlur Rahman and Aidana Tassanbi - PhD students at Delft University of Technology
+### Bintang A.S.W.A.M - Masters student at Skolkovo Institute of Science and Technology
 
